@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="vi"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Học Tập Thông Minh</title>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#fffaf5;--card:#fff;--text:#1d2433;--muted:#667085;--line:#e3e6ee;--pri:#F76B1C;--navy:#1b365d;--ok:#059669;--okBg:#d1fae5;--bad:#dc2626;--badBg:#fee2e2}
+@media(prefers-color-scheme:dark){:root{--bg:#0f1115;--card:#1b1e24;--text:#f3f4f6;--muted:#9ca3af;--line:#374151;--navy:#93b4e6;--okBg:#064e3b;--badBg:#7f1d1d}}
+*{box-sizing:border-box;margin:0}
+body{background:var(--bg);color:var(--text);font:20px/1.6 'Be Vietnam Pro',system-ui,sans-serif;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+main{max-width:860px;margin:0 auto;padding:24px 16px}
+h1{font-size:30px;font-weight:800;color:var(--navy);text-align:center}
+.sub{text-align:center;color:var(--muted);font-size:18px;margin:4px 0 20px}
+.hidden{display:none!important}
+.card{background:var(--card);border:2px solid var(--line);border-radius:20px;padding:24px;margin-bottom:16px}
+button{font:inherit;font-weight:600;padding:12px 22px;border-radius:14px;border:2px solid var(--line);background:var(--card);color:var(--text);cursor:pointer}
+button.pri{background:var(--pri);border-color:var(--pri);color:#fff}
+button:focus-visible,input:focus-visible{outline:3px solid var(--navy);outline-offset:2px}
+input[type=text]{font:inherit;width:100%;padding:12px 16px;border-radius:14px;border:2px solid var(--line);background:var(--bg);color:var(--text)}
+.set{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;border:2px solid var(--line);border-radius:16px;padding:16px;margin-bottom:12px}
+.set b{font-size:22px;display:block}.set small{color:var(--muted);font-size:17px}
+.q{font-size:24px;font-weight:600;margin:8px 0 16px}.ctx{font-size:22px;background:var(--bg);border-radius:14px;padding:14px;margin-bottom:12px}
+.opt{display:block;width:100%;text-align:left;font-size:22px;margin-bottom:10px}
+.opt.ok{background:var(--okBg);border-color:var(--ok)}.opt.bad{background:var(--badBg);border-color:var(--bad)}
+.fb{margin-top:14px;padding:14px;border-radius:14px;font-size:20px}.fb.ok{background:var(--okBg)}.fb.bad{background:var(--badBg)}
+.row{display:flex;gap:12px;flex-wrap:wrap;margin-top:16px}
+.bar{height:10px;background:var(--line);border-radius:9px;overflow:hidden;margin:10px 0 16px}.bar i{display:block;height:100%;background:var(--pri);width:0}
+.big{font-size:56px;font-weight:800;text-align:center;color:var(--pri)}
+.top{display:flex;justify-content:space-between;align-items:center}
+</style></head><body><main>
+<section id="home">
+<h1>📚 Học Tập Thông Minh</h1><p class="sub">Chọn một bài rồi bắt đầu làm nhé!</p>
+<div class="card"><label for="nm" style="font-weight:600">Tên của em</label><input type="text" id="nm" placeholder="Gõ tên của em" autocomplete="off"></div>
+<div id="list"></div>
+<div class="card"><label style="font-weight:600">Có file bộ đề trên máy?</label><p class="sub" style="text-align:left;margin:4px 0 10px">Chọn file .json để làm thử.</p><input type="file" id="lf" accept=".json"></div>
+</section>
+<section id="quiz" class="hidden">
+<div class="top"><span id="cnt" style="font-weight:600"></span><button id="exit">Thoát</button></div>
+<div class="bar"><i id="pb"></i></div><div class="card" id="qc"></div>
+</section>
+<section id="res" class="hidden"><div class="card"><div class="big" id="pct"></div><p id="msg" style="text-align:center;font-weight:600;margin:8px 0 16px"></p><div id="wl"></div>
+<div class="row"><button class="pri" id="rw">Làm lại các câu sai</button><button id="ra">Làm lại cả bài</button><button id="rh">Chọn bài khác</button></div></div></section>
+</main>
+<script>
+var $=function(i){return document.getElementById(i)};
+function esc(s){var d=document.createElement("div");d.textContent=s==null?"":String(s);return d.innerHTML}
+function norm(s){return String(s).toLowerCase().replace(/[.,!?;]+$/,"").replace(/\s+/g," ").trim()}
+function shuf(a){a=a.slice();for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t}return a}
+function show(id){["home","quiz","res"].forEach(function(s){$(s).classList.toggle("hidden",s!==id)});scrollTo(0,0)}
+var set=null,Q=[],i=0,wrong=[],done=false,total=0,fname="";
+$("nm").value=localStorage.getItem("htm_name")||"";$("nm").oninput=function(){localStorage.setItem("htm_name",$("nm").value)};
+function best(f){try{return localStorage.getItem("htm_best_"+f)}catch(e){return null}}
+function home(){show("home")}
+fetch("data/index.json?"+Date.now()).then(function(r){return r.json()}).then(function(L){
+ $("list").innerHTML=L.map(function(x,k){var b=best(x.file);return '<div class="set"><div><b>'+esc(x.title)+'</b><small>'+esc(x.subject||"")+' '+esc(x.grade||"")+(b?' · Điểm cao nhất: '+b+'%':'')+'</small></div><button class="pri" data-f="'+esc(x.file)+'">Làm bài</button></div>'}).join("")||'<div class="card">Chưa có bài nào.</div>';
+ $("list").onclick=function(e){var f=e.target.getAttribute&&e.target.getAttribute("data-f");if(f)fetch("data/"+f+"?"+Date.now()).then(function(r){return r.json()}).then(function(d){begin(d,f)}).catch(function(){alert("Không mở được bài này.")})};
+}).catch(function(){$("list").innerHTML='<div class="card">Chưa tải được danh sách bài. Hãy mở bằng đường link của thầy/cô, hoặc chọn file bộ đề ở bên dưới.</div>'});
+$("lf").onchange=function(e){var f=e.target.files[0];if(!f)return;var r=new FileReader();r.onload=function(){try{begin(JSON.parse(r.result),f.name)}catch(x){alert("File không đúng định dạng.")}};r.readAsText(f)};
+function begin(d,f){if(!d||!d.questions||!d.questions.length){alert("Bộ đề trống.");return}set=d;fname=f;total=d.questions.length;run(d.questions)}
+function run(qs){Q=qs;i=0;wrong=[];show("quiz");draw()}
+function draw(){
+ var q=Q[i];done=false;$("cnt").textContent="Câu "+(i+1)+" / "+Q.length;$("pb").style.width=(i/Q.length*100)+"%";
+ var mc=q.options&&q.options.length>=2,h=(q.context?'<div class="ctx">'+esc(q.context)+'</div>':'')+'<div class="q">'+esc(q.q)+'</div>';
+ if(mc){q._o=q._o||shuf(q.options);h+=q._o.map(function(o,k){return '<button class="opt" data-k="'+k+'">'+String.fromCharCode(65+k)+'. '+esc(o)+'</button>'}).join("")}
+ else h+='<input type="text" id="fa" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Gõ câu trả lời..."><div class="row"><button class="pri" id="chk">Kiểm tra</button></div>';
+ h+='<div id="fb"></div><div class="row hidden" id="nx"><button class="pri" id="nb">'+(i===Q.length-1?'Xem kết quả':'Câu tiếp theo')+'</button></div>';
+ $("qc").innerHTML=h;if($("fa"))$("fa").focus();
+}
+function judge(ok,q,val){
+ if(done)return;done=true;if(!ok)wrong.push(q);
+ var h='<div class="fb '+(ok?'ok':'bad')+'"><b>'+(ok?'🎉 Đúng rồi!':'Chưa đúng. Đáp án: '+esc(q.answer))+'</b>'+(q.explain?'<br>'+esc(q.explain):'')+'</div>';
+ $("fb").innerHTML=h;$("nx").classList.remove("hidden");$("nb").focus();
+ if($("fa")){$("fa").disabled=true;$("chk").disabled=true}
+}
+$("qc").onclick=function(e){var t=e.target,q=Q[i];
+ if(t.classList.contains("opt")&&!done){var o=q._o[+t.getAttribute("data-k")],ok=norm(o)===norm(q.answer);t.classList.add(ok?"ok":"bad");if(!ok)[].forEach.call($("qc").querySelectorAll(".opt"),function(b){if(norm(q._o[+b.getAttribute("data-k")])===norm(q.answer))b.classList.add("ok")});[].forEach.call($("qc").querySelectorAll(".opt"),function(b){b.disabled=true});judge(ok,q)}
+ else if(t.id==="chk"){var v=$("fa").value.trim();if(!v)return;var acc=[q.answer].concat(q.accept||[]).map(norm);judge(acc.indexOf(norm(v))>-1,q)}
+ else if(t.id==="nb"){i++;if(i<Q.length)draw();else finish()}};
+$("qc").onkeydown=function(e){if(e.key==="Enter"&&e.target.id==="fa"&&!done)$("chk").click()};
+function finish(){
+ var ok=total-wrong.length;if(Q.length<total&&Q!==set.questions){ok=Q.length-wrong.length}
+ var n=Q===set.questions?total:Q.length,p=Math.round((n-wrong.length)/n*100);
+ $("pct").textContent=p+"%";$("msg").textContent=(localStorage.getItem("htm_name")?localStorage.getItem("htm_name")+" ơi, ":"")+(p===100?"em làm đúng hết! Tuyệt vời! 🌟":p>=70?"em làm tốt lắm! 👏":"cố gắng thêm chút nữa nhé! 💪");
+ if(Q===set.questions){try{var b=+best(fname)||0;if(p>b)localStorage.setItem("htm_best_"+fname,p)}catch(e){}}
+ $("wl").innerHTML=wrong.length?'<h3 style="color:var(--bad);margin-bottom:8px">Các câu cần xem lại</h3>'+wrong.map(function(q){return '<div class="set" style="display:block"><b style="font-size:20px">'+esc(q.q)+'</b>Đáp án: <b style="color:var(--ok)">'+esc(q.answer)+'</b>'+(q.explain?'<br><small>'+esc(q.explain)+'</small>':'')+'</div>'}).join(""):"";
+ $("rw").classList.toggle("hidden",!wrong.length);show("res");
+}
+$("rw").onclick=function(){var w=wrong.slice();w.forEach(function(q){q._o=null});run(w)};
+$("ra").onclick=function(){set.questions.forEach(function(q){q._o=null});run(set.questions)};
+$("rh").onclick=home;$("exit").onclick=function(){if(confirm("Thoát bài làm?"))home()};
+</script></body></html>

@@ -1,0 +1,7 @@
+{"title":"Toán lớp 2 – Bài mẫu","subject":"Toán","grade":"Lớp 2","questions":[
+{"context":"","q":"Kết quả của phép tính 45 + 27 là:","options":["72","62","82","71"],"answer":"72","accept":["72"],"explain":"45 + 27 = 72."},
+{"context":"","q":"Số liền sau của 99 là:","options":["100","98","101","90"],"answer":"100","accept":["100"],"explain":"Số liền sau của 99 là 99 + 1 = 100."},
+{"context":"","q":"Tính: 100 − 36 = ?","options":[],"answer":"64","accept":["64"],"explain":"100 − 36 = 64."},
+{"context":"Mỗi hộp có 5 cái kẹo.","q":"4 hộp như vậy có tất cả bao nhiêu cái kẹo?","options":[],"answer":"20","accept":["20","20 cái","20 cái kẹo"],"explain":"5 × 4 = 20 (cái kẹo)."},
+{"context":"","q":"Trong các số 58, 85, 49, 76, số nào lớn nhất?","options":["85","58","49","76"],"answer":"85","accept":["85"],"explain":"So sánh hàng chục: 8 chục là lớn nhất, nên 85 lớn nhất."}
+]}
