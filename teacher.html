@@ -184,7 +184,16 @@ details > div { padding: 16px; }
         <div class="note" id="dstat" style="margin-top:12px; font-weight:600;">Trạng thái: Chưa có tài liệu.</div>
       </div>
 
-      <div class="card hidden" id="savedBox" style="border-image: none; border-color: var(--line); box-shadow: none;">
+      <div class="card" id="libBox"><h2>☁️ Thư viện sách (lưu trên GitHub)</h2>
+<div class="note" style="margin-bottom:10px">Lưu sách một lần, máy nào cũng mở lại được mà không phải tải lại.</div>
+<details id="ghSet"><summary style="cursor:pointer;font-weight:600">⚙️ Kết nối GitHub (nhập 1 lần trên mỗi máy)</summary>
+<label class="f">Tên tài khoản GitHub</label><input id="ghO">
+<label class="f">Tên kho chứa sách (nên để riêng tư)</label><input id="ghR">
+<label class="f">Mã truy cập (token)</label><input id="ghT" type="password" autocomplete="off" placeholder="Dán mã token vào đây">
+<div class="btns" style="margin-top:12px"><button class="pri" id="ghSave">Lưu kết nối</button></div></details>
+<div class="btns" style="margin-top:14px"><button id="libSave">⬆ Lưu tài liệu đang chọn vào thư viện</button><button id="libRef">🔄 Làm mới danh sách</button></div>
+<div class="note" id="libMsg" style="margin-top:10px"></div><div id="libList" style="margin-top:12px"></div></div>
+<div class="card hidden" id="savedBox" style="border-image: none; border-color: var(--line); box-shadow: none;">
         <h2>📚 Bộ đề đang lưu trữ</h2>
         <div class="note" id="savedInfo"></div>
         <div class="btns" style="margin-top: 16px;">
@@ -655,6 +664,59 @@ $("exportJson").onclick=function(){
  var a=document.createElement("a");a.href=URL.createObjectURL(new Blob([JSON.stringify(d,null,2)],{type:"application/json"}));a.download=slug+".json";a.click();
  alert("Đã tải file "+slug+".json\nĐưa file này vào thư mục data trên GitHub và thêm 1 dòng vào data/index.json (xem hướng dẫn).");
 };})();
+</script>
+<script>
+(function(){
+var K={o:"gh_owner",r:"gh_repo",t:"gh_token"};
+function cfg(k){return localStorage.getItem(K[k])||""}
+$("ghO").value=cfg("o")||"minhnq291183";$("ghR").value=cfg("r")||"hoc-tap-thong-minh-sach";
+function msg(t,c){var m=$("libMsg");m.textContent=t;m.style.color=c||"var(--muted)"}
+function ok(){return cfg("o")&&cfg("r")&&cfg("t")}
+function url(p){return "https://api.github.com/repos/"+cfg("o")+"/"+cfg("r")+"/contents/"+p.split("/").map(encodeURIComponent).join("/")}
+function hd(raw){return{"Authorization":"Bearer "+cfg("t"),"Accept":raw?"application/vnd.github.raw+json":"application/vnd.github+json","X-GitHub-Api-Version":"2022-11-28"}}
+function b64(s){var b=new TextEncoder().encode(s),r="";for(var i=0;i<b.length;i+=8192)r+=String.fromCharCode.apply(null,b.subarray(i,i+8192));return btoa(r)}
+function fail(r){return new Error(r.status===401?"Mã token sai hoặc đã hết hạn.":r.status===404?"Không tìm thấy kho. Kiểm tra tên tài khoản, tên kho và quyền của token.":"GitHub báo lỗi "+r.status)}
+async function put(p,text){var sha,g=await fetch(url(p),{headers:hd(),cache:"no-store"});if(g.ok)sha=(await g.json()).sha;
+ var r=await fetch(url(p),{method:"PUT",headers:hd(),body:JSON.stringify({message:"Lưu sách",content:b64(text),sha:sha})});if(!r.ok)throw fail(r)}
+async function refresh(){
+ if(!ok()){$("ghSet").open=true;msg("Hãy nhập thông tin kết nối GitHub trước.");return}
+ msg("Đang tải danh sách…");
+ try{var r=await fetch(url("books"),{headers:hd(),cache:"no-store"}),L=[];
+  if(r.status===404){msg("Thư viện chưa có sách nào.")}
+  else if(!r.ok)throw fail(r);
+  else{L=(await r.json()).filter(function(f){return /\.json$/.test(f.name)});msg(L.length?L.length+" sách trong thư viện.":"Thư viện chưa có sách nào.")}
+  $("libList").innerHTML=L.map(function(f){return '<div class="doc-item"><button class="doc-del" data-del="'+esc(f.name)+'" data-sha="'+f.sha+'">✕</button><div class="doc-name">📕 '+esc(f.name.replace(/\.json$/,""))+'</div><button class="pri" data-use="'+esc(f.name)+'">Dùng sách này</button></div>'}).join("");
+ }catch(e){msg("Lỗi: "+e.message,"var(--bad)")}
+}
+$("ghSave").onclick=function(){var o=$("ghO").value.trim(),r=$("ghR").value.trim(),t=$("ghT").value.trim();
+ if(!o||!r){msg("Nhập đủ tên tài khoản và tên kho.","var(--bad)");return}
+ localStorage.setItem(K.o,o);localStorage.setItem(K.r,r);if(t){localStorage.setItem(K.t,t);$("ghT").value=""}
+ $("ghSet").open=false;refresh()};
+$("libRef").onclick=refresh;
+$("libSave").onclick=async function(){
+ if(!ok()){$("ghSet").open=true;msg("Hãy nhập thông tin kết nối GitHub trước.");return}
+ var items=[];uploadedDocs.forEach(function(d){if(d.pages.join("").trim())items.push({name:d.name.replace(/\.[^.]+$/,""),pages:d.pages})});
+ var p=$("paste").value.trim();
+ if(p){var n=prompt("Phần chữ dán hoặc quét OCR sẽ được lưu thành một sách. Đặt tên:","Văn bản dán");if(n)items.push({name:n,pages:[p]})}
+ if(!items.length){msg("Chưa có tài liệu nào để lưu.","var(--bad)");return}
+ this.disabled=true;
+ try{for(var i=0;i<items.length;i++){msg("Đang lưu "+(i+1)+"/"+items.length+": "+items[i].name+"…");
+   var fn=items[i].name.replace(/[\\/:*?"<>|#%]/g,"-").trim()||"sach";
+   await put("books/"+fn+".json",JSON.stringify({name:items[i].name,pages:items[i].pages}))}
+  await refresh();msg("✅ Đã lưu "+items.length+" sách lên GitHub.","var(--ok)")}
+ catch(e){msg("Lỗi: "+e.message,"var(--bad)")}
+ this.disabled=false};
+$("libList").onclick=async function(e){
+ var u=e.target.closest("[data-use]"),d=e.target.closest("[data-del]");
+ try{
+  if(u){msg("Đang mở sách…");var r=await fetch(url("books/"+u.dataset.use),{headers:hd(true),cache:"no-store"});if(!r.ok)throw fail(r);
+   var b=JSON.parse(await r.text());
+   uploadedDocs.push({id:docIdCounter++,name:b.name,pages:b.pages,p1:1,p2:b.pages.length||1,isScan:false,pdfRef:null});
+   renderFileList();updateDocTextStat();$("gen").disabled=false;msg("✅ Đã mở: "+b.name,"var(--ok)")}
+  else if(d&&confirm("Xóa sách này khỏi thư viện?")){var r2=await fetch(url("books/"+d.dataset.del),{method:"DELETE",headers:hd(),body:JSON.stringify({message:"Xóa sách",sha:d.dataset.sha})});if(!r2.ok)throw fail(r2);refresh()}
+ }catch(x){msg("Lỗi: "+x.message,"var(--bad)")}};
+if(ok())refresh();else msg("Chưa kết nối GitHub.");
+})();
 </script>
 </body>
 </html>
