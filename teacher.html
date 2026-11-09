@@ -148,6 +148,8 @@ details { margin: 12px 0; background: #fff; border: 1px solid var(--line); borde
 summary { cursor: pointer; font-weight: 600; padding: 16px; background: var(--bg); }
 details > div { padding: 16px; }
 #qcard { max-width: 900px; margin: 0 auto; }
+.chip{margin:4px;font-size:1.1rem}.ordOut{min-height:56px;border:2px dashed var(--line);border-radius:14px;padding:10px 14px;margin-bottom:12px;font-size:1.2rem}
+.mrow{display:flex;gap:12px;align-items:center;margin-bottom:12px;flex-wrap:wrap}.mrow span{flex:1 1 40%;font-size:1.15rem;font-weight:600}.mrow select{font:inherit;padding:10px;border-radius:12px;border:2px solid var(--line);background:var(--card);color:var(--text);flex:1 1 40%}
 </style>
 </head>
 <body>
@@ -185,7 +187,7 @@ details > div { padding: 16px; }
       </div>
 
       <div class="card" id="libBox"><h2>☁️ Thư viện sách (lưu trên GitHub)</h2>
-<div class="note" style="margin-bottom:10px">Lưu sách một lần, máy nào cũng mở lại được mà không phải tải lại.</div>
+<div class="note" style="margin-bottom:10px">Chọn <b>Môn học</b> và <b>Lớp</b> ở khung 2 trước khi bấm Lưu: sách sẽ được gắn với môn đó, lần sau mở sách là trang tự chọn đúng môn.</div>
 <details id="ghSet"><summary style="cursor:pointer;font-weight:600">⚙️ Kết nối GitHub (nhập 1 lần trên mỗi máy)</summary>
 <label class="f">Tên tài khoản GitHub</label><input id="ghO">
 <label class="f">Tên kho chứa sách (nên để riêng tư)</label><input id="ghR">
@@ -209,11 +211,11 @@ details > div { padding: 16px; }
       <div class="card">
         <h2>⚙️ 2. Cấu hình bài tập</h2>
         <div class="g2">
-          <div><label class="f">Môn học</label><select id="sub"><option>Tiếng Anh</option><option>Toán</option></select></div>
+          <div><label class="f">Môn học</label><select id="sub"><option>Tiếng Việt</option><option>Toán</option><option>Tiếng Anh</option></select></div>
           <div><label class="f">Lớp / Trình độ</label><input id="grade" placeholder="Ví dụ: Lớp 6"></div>
           <div><label class="f">Dạng bài</label>
             <select id="type">
-              <option value="mc">Trắc nghiệm A–D</option>
+              <option value="auto">Giống dạng bài trong sách (AI tự chọn)</option><option value="mc">Trắc nghiệm A–D</option>
               <option value="fill">Điền đáp án (gõ)</option>
               <option value="mix">Hỗn hợp</option>
             </select>
@@ -302,8 +304,9 @@ details > div { padding: 16px; }
 
 <script>
 var $=function(i){return document.getElementById(i)};
-var Q=[],view=[],cur=0,ctl=null,MAX=30000;
+var Q=[],view=[],cur=0,ctl=null,MAX=150000;
 var EX={
+"Tiếng Việt":["Điền vần hoặc chữ đúng chính tả","Chọn từ chỉ sự vật / hoạt động / đặc điểm","Đọc hiểu: trích đoạn bài đọc trong sách rồi hỏi","Chọn từ ngữ phù hợp để điền vào câu"],
   "Tiếng Anh":["Trắc nghiệm ngữ pháp từ tài liệu","Điền từ vào chỗ trống","Đọc hiểu: 1 đoạn văn và các câu hỏi","Từ vựng: chọn nghĩa đúng"],
   "Toán":["Bài toán có lời văn","Tính nhanh, tính giá trị biểu thức","Toán nâng cao phân loại","Hình học cơ bản"]
 };
@@ -470,14 +473,17 @@ function docText() {
 }
 
 function buildPrompt(s, n, ex) {
-  var tn = s.type === "mc" ? "trắc nghiệm 4 lựa chọn" : s.type === "fill" ? "điền đáp án ngắn" : "hỗn hợp trắc nghiệm và điền đáp án ngắn";
+  var tn = s.type === "auto" ? "đa dạng, phỏng theo các dạng bài tập có trong tài liệu" : s.type === "mc" ? "trắc nghiệm 4 lựa chọn" : s.type === "fill" ? "điền đáp án ngắn" : "hỗn hợp trắc nghiệm và điền đáp án ngắn";
   return "Đóng vai giáo viên môn " + s.sub + " xuất sắc, soạn bài tập cho học sinh " + (s.grade || "phổ thông") + ".\n" +
   "TÀI LIỆU THAM KHẢO:\n\"\"\"\n" + s.doc + "\n\"\"\"\n" +
   "TUYỆT ĐỐI CHỈ SỬ DỤNG thông tin, kiến thức từ tài liệu cung cấp bên trên để soạn câu hỏi. KHÔNG ĐƯỢC dùng kiến thức bên ngoài.\n" +
+  (s.sub === "Tiếng Anh" ? "" : "NGÔN NGỮ: Viết TOÀN BỘ câu hỏi, đáp án và giải thích bằng tiếng Việt, KHÔNG dịch sang tiếng Anh.\n") +
+  (s.sub === "Tiếng Việt" ? "BÁM SÁT SÁCH: nếu tài liệu có bài tập (điền vần/chữ, chọn từ đúng chính tả, tìm từ chỉ sự vật/hoạt động/đặc điểm, sắp xếp từ thành câu, đặt câu, đọc hiểu…) thì ra câu có dạng và cách hỏi tương tự, dùng đúng bài đọc, từ ngữ, nhân vật trong tài liệu. Với đọc hiểu, chép NGUYÊN VĂN đoạn văn từ tài liệu vào trường context. Không bịa nội dung không có trong sách.\n" : "") +
   "YÊU CẦU: " + (s.req || "bài tập tổng hợp") + "\n" +
   (ex && ex.length ? "CÁC CÂU ĐÃ CÓ (không lặp lại):\n- " + ex.join("\n- ") + "\n" : "") +
   "Soạn chính xác " + n + " câu hỏi mới, dạng " + tn + ", độ khó " + s.lvl + ".\n" +
   "Trả về DUY NHẤT một mảng JSON các object. Object gồm: {\"context\":\"đoạn văn dùng chung (nếu cần)\",\"q\":\"câu hỏi\",\"options\":[\"đáp án ĐÚNG\",\"sai 1\",\"sai 2\",\"sai 3\"],\"answer\":\"đáp án đúng\",\"accept\":[\"cách viết khác chấp nhận được\"],\"explain\":\"giải thích\"}.\n"+
+  (s.type === "auto" ? " Dạng bài tự chọn: ngoài trắc nghiệm và điền đáp án, bạn được dùng thêm 3 dạng khi tài liệu có bài tập tương tự: (1) Đúng/Sai: options là [\"Đúng\",\"Sai\"] hoặc [\"Sai\",\"Đúng\"] sao cho phần tử đầu là đáp án đúng. (2) Sắp xếp từ thành câu: {\"kind\":\"order\",\"q\":\"Sắp xếp các từ thành câu đúng\",\"items\":[các từ hoặc cụm từ đã xáo trộn],\"answer\":\"câu đúng\",\"explain\":\"...\"}. (3) Nối cột: {\"kind\":\"match\",\"q\":\"Nối cho đúng\",\"pairs\":[[\"vế trái\",\"vế phải đúng\"],...],\"explain\":\"...\"} với 3 đến 5 cặp. Hãy phỏng theo đúng các dạng bài tập mà sách đang dùng.\n" : "") +
   "Quy tắc: Câu trắc nghiệm có 4 options, đáp án đúng nằm đầu mảng. Câu điền từ để options là mảng rỗng [].";
 }
 
@@ -518,7 +524,7 @@ async function callAI(p, sub, c, buttonId) {
 
 var S=null,KEY="aiquiz_pro",newFrom=-1,savedAt=0;
 function formS(){return{sub:$("sub").value,grade:$("grade").value.trim(),type:$("type").value,lvl:$("lvl").value,req:$("req").value.trim(),doc:docText().slice(0,MAX)}}
-function save(){try{if(!Q.length){localStorage.removeItem(KEY);return}savedAt=Date.now();localStorage.setItem(KEY,JSON.stringify({t:savedAt,S:S,Q:Q.map(function(q){return{context:q.context,q:q.q,mc:q.mc,correct:q.correct,opts:q.opts,accept:q.accept,explain:q.explain}})}))}catch(e){}}
+function save(){try{if(!Q.length){localStorage.removeItem(KEY);return}savedAt=Date.now();localStorage.setItem(KEY,JSON.stringify({t:savedAt,S:S,Q:Q.map(function(q){return{context:q.context,q:q.q,mc:q.mc,correct:q.correct,opts:q.opts,accept:q.accept,explain:q.explain,kind:q.kind,items:q.items,pairs:q.pairs}})}))}catch(e){}}
 function showSaved(){var b=$("savedBox");if(!b)return;if(!Q.length){b.classList.add("hidden");return}
   $("savedInfo").innerHTML="<b>"+Q.length+" câu</b>"+(S&&S.sub?" · "+S.sub:"")+"<br><span style='font-size:0.85rem'>Lưu lúc: "+new Date(savedAt).toLocaleString("vi-VN")+"</span>";b.classList.remove("hidden")}
 
@@ -564,16 +570,30 @@ async function more(p){
   finally { btn.disabled=false; btn.textContent="Mở rộng bộ đề ngay"; }
 }
 
-function clean(r){if(!r||!r.q||!(r.answer||(r.options&&r.options[0])))return null;
+function clean0(r){if(!r||!r.q||!(r.answer||(r.options&&r.options[0])))return null;
   var o=Array.isArray(r.options)?r.options.map(String).filter(function(x,i,a){return x&&a.indexOf(x)===i}):[];
   var isMc=o.length>=2;return{context:r.context?String(r.context):"",q:String(r.q),mc:isMc,correct:isMc?o[0]:String(r.answer),opts:o,accept:[String(r.answer||"")].concat((r.accept||[]).map(String)).filter(Boolean),explain:r.explain?String(r.explain):"",a:null,ok:null,list:o}}
 
+function kHtml(q,done){
+ if(q.kind==="order"){if(done)return '<div class="ordOut">'+esc(q.a)+'</div>';
+  return '<div class="ordOut" id="oo">&nbsp;</div><div>'+q._w.map(function(w,k){return '<button class="chip" data-w="'+k+'">'+esc(w)+'</button>'}).join("")+'</div><div class="btns"><button id="und">↩ Xóa từ cuối</button><button class="pri" id="fk">Kiểm tra</button></div>'}
+ if(done)return q.pairs.map(function(p){return '<div class="mrow"><span>'+esc(p[0])+'</span><b>→ '+esc(p[1])+'</b></div>'}).join("");
+ return q.pairs.map(function(p){return '<div class="mrow"><span>'+esc(p[0])+'</span><select><option value="">— chọn —</option>'+q._r.map(function(r){return '<option>'+esc(r)+'</option>'}).join("")+'</select></div>'}).join("")+'<div class="btns"><button class="pri" id="fk">Kiểm tra</button></div>'}
+function xtra(q){return "<div style='margin-top:8px;color:var(--muted)'>"+(q.kind==="order"?"Sắp xếp: "+q.items.map(esc).join(" / ")+" <b style='color:var(--ok)'>✓ "+esc(q.correct)+"</b>":q.pairs.map(function(p){return esc(p[0])+" → "+esc(p[1])}).join("<br>")+" <b style='color:var(--ok)'>✓</b>")+"</div>"}
+function clean(r){
+ var k=String((r&&r.kind)||"").toLowerCase();
+ if(r&&r.q&&k==="order"&&Array.isArray(r.items)&&r.items.length>=2){var it=r.items.map(String),a=r.answer?String(r.answer):it.join(" ");
+  return{context:r.context?String(r.context):"",q:String(r.q),mc:false,kind:"order",items:it,correct:a,opts:[],accept:[a].concat((r.accept||[]).map(String)),explain:r.explain?String(r.explain):"",a:null,ok:null,list:[]}}
+ if(r&&r.q&&k==="match"&&Array.isArray(r.pairs)){var ps=r.pairs.filter(function(p){return Array.isArray(p)&&p.length>=2}).map(function(p){return[String(p[0]),String(p[1])]});if(ps.length<2)return null;
+  return{context:r.context?String(r.context):"",q:String(r.q),mc:false,kind:"match",pairs:ps,correct:ps.map(function(p){return p[0]+" → "+p[1]}).join("; "),opts:[],accept:[ps.map(function(p){return p[1]}).join("|")],explain:r.explain?String(r.explain):"",a:null,ok:null,list:[]}}
+ return clean0(r)}
+function ordTxt(q){return $("oo").textContent=q._c.map(function(k){return q._w[k]}).join(" ")||"\u00a0"}
 function preview(){
   var nf=newFrom>=0&&newFrom<Q.length;
   $("pvT").innerHTML="Danh sách câu hỏi <span style='color:var(--pri)'>("+Q.length+" câu)</span>"+(nf?" <span style='font-size:0.9rem'>[+"+(Q.length-newFrom)+" mới]</span>":"");
   var h="";
   Q.forEach(function(q,i){
-    h+='<div class="pv"><div>'+(nf&&i>=newFrom?'<span style="color:var(--pri); font-weight:bold">[Mới]</span> ':"")+'<b>Câu '+(i+1)+':</b> '+esc(q.q)+(q.mc?"\n<div style='margin-top:8px; color:var(--muted)'>"+q.opts.map(function(o,k){return String.fromCharCode(65+k)+". "+esc(o)+(k===0?" <b style='color:var(--ok)'>✓</b>":"")}).join("<br>")+"</div>":"\n<div style='margin-top:8px; color:var(--ok); font-weight:600'>Đáp án: "+esc(q.correct)+"</div>")+'</div><button data-i="'+i+'" title="Xóa câu này">✕</button></div>'
+    h+='<div class="pv"><div>'+(nf&&i>=newFrom?'<span style="color:var(--pri); font-weight:bold">[Mới]</span> ':"")+'<b>Câu '+(i+1)+':</b> '+esc(q.q)+(q.kind?xtra(q):q.mc?"\n<div style='margin-top:8px; color:var(--muted)'>"+q.opts.map(function(o,k){return String.fromCharCode(65+k)+". "+esc(o)+(k===0?" <b style='color:var(--ok)'>✓</b>":"")}).join("<br>")+"</div>":"\n<div style='margin-top:8px; color:var(--ok); font-weight:600'>Đáp án: "+esc(q.correct)+"</div>")+'</div><button data-i="'+i+'" title="Xóa câu này">✕</button></div>'
   });
   $("pvList").innerHTML=h; $("start").textContent="Bắt đầu làm bài ("+Q.length+" câu)"; $("start").disabled=!Q.length;
   $("startNew").classList.toggle("hidden",!nf); $("startNew").textContent="Chỉ làm "+(Q.length-newFrom)+" câu mới"; show("s-prev");
@@ -582,7 +602,7 @@ $("pvList").onclick=function(e){var b=e.target.closest("button[data-i]");if(b){v
 $("startNew").onclick=function(){begin(Q.slice(newFrom))}; $("regen").onclick=function(){showSaved();show("s-setup")};
 
 function shuffle(a){a=a.slice();for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1)),t=a[i];a[i]=a[j];a[j]=t}return a}
-function begin(list){view=list;view.forEach(function(q){q.a=null;q.ok=null;q.list=q.mc?shuffle(q.opts):[]});cur=0;show("s-quiz");render()}
+function begin(list){view=list;view.forEach(function(q){q.a=null;q.ok=null;q.list=q.mc?shuffle(q.opts):[];q._w=q.items?shuffle(q.items):null;q._c=[];q._r=q.pairs?shuffle(q.pairs.map(function(p){return p[1]})):null});cur=0;show("s-quiz");render()}
 $("start").onclick=function(){begin(Q.slice())};
 function norm(s){return String(s).toLowerCase().replace(/[’'.]+$/,"").replace(/\s+/g," ").trim()}
 function same(a,b){var x=norm(a),y=norm(b);if(x===y)return true;var nx=parseFloat(x.replace(",",".")),ny=parseFloat(y.replace(",","."));return!isNaN(nx)&&!isNaN(ny)&&/^-?[\d.,]+$/.test(x)&&/^-?[\d.,]+$/.test(y)&&Math.abs(nx-ny)<1e-9}
@@ -594,7 +614,7 @@ function render(){
   $("pb").style.width=(no/view.length*100)+"%";
   $("prv").disabled=cur===0; $("nxt").textContent=cur===view.length-1?"Hoàn thành & Chấm điểm":"Câu tiếp theo →";
   var h=(q.context?'<div class="ctx">'+esc(q.context)+'</div>':"")+'<div class="q">'+esc(q.q)+'</div>';
-  if(q.mc){
+  if(q.kind){h+=kHtml(q,done)} else if(q.mc){
     q.list.forEach(function(o,i){
       var c="opt"; if(done){if(o===q.correct)c+=" ok";else if(o===q.a)c+=" bad"}
       h+='<button class="'+c+'" data-i="'+i+'"'+(done?" disabled":"")+'><b>'+String.fromCharCode(65+i)+'.</b> '+esc(o)+'</button>'
@@ -603,11 +623,15 @@ function render(){
     h+='<input id="fa" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Nhập câu trả lời..."'+(done?' value="'+esc(q.a).replace(/"/g,"&quot;")+'" disabled':"")+' style="font-size:1.1rem; padding: 16px;">'+(done?"":'<div class="btns"><button class="pri" id="fc" style="margin-top:12px;">Kiểm tra</button></div>')
   }
   if(done){ h+='<div class="fb '+(q.ok?"good":"wrong")+'">'+(q.ok?"🎉 Xuất sắc! Bạn trả lời đúng.":"💡 Chưa chính xác. Đáp án đúng là: "+esc(q.correct))+'</div>'+(q.explain?'<div class="ex"><b>Giải thích:</b><br><br>'+esc(q.explain)+'</div>':"") }
-  $("qcard").innerHTML=h; if(!q.mc&&!done)$("fa").focus();
+  $("qcard").innerHTML=h; if(!q.mc&&!q.kind&&!done)$("fa").focus();
 }
 
 function answer(v){var q=view[cur];if(q.a!==null)return;q.a=v;q.ok=q.mc?v===q.correct:q.accept.some(function(x){return same(x,v)});render()}
-$("qcard").onclick=function(e){var b=e.target.closest(".opt");if(b&&!b.disabled)answer(view[cur].list[+b.dataset.i]);if(e.target.id==="fc"){var v=$("fa").value.trim();if(v)answer(v)}};
+$("qcard").onclick=function(e){var q0=view[cur],t=e.target;
+ if(t.classList.contains("chip")&&!t.disabled){q0._c.push(+t.dataset.w);t.disabled=true;ordTxt(q0);return}
+ if(t.id==="und"&&q0._c.length){var k0=q0._c.pop();[].forEach.call($("qcard").querySelectorAll(".chip"),function(b){if(+b.dataset.w===k0)b.disabled=false});ordTxt(q0);return}
+ if(t.id==="fk"){if(q0.kind==="order"){if(q0._c.length)answer(q0._c.map(function(k){return q0._w[k]}).join(" "))}else{var all=true,vals=[];[].forEach.call($("qcard").querySelectorAll("select"),function(s){if(!s.value)all=false;vals.push(s.value)});if(!all){alert("Hãy nối đủ các ô.");return}answer(vals.join("|"))}return}
+ var b=e.target.closest(".opt");if(b&&!b.disabled)answer(view[cur].list[+b.dataset.i]);if(e.target.id==="fc"){var v=$("fa").value.trim();if(v)answer(v)}};
 $("qcard").onkeydown=function(e){if(e.key==="Enter"&&e.target.id==="fa"){var v=e.target.value.trim();if(v)answer(v)}};
 
 var xt=null,XL="Thoát";
@@ -659,7 +683,7 @@ $("keySave").onclick=function(){var v=$("keyIn").value.trim();if(!v){m.textConte
 $("exportJson").onclick=function(){
  if(!Q.length){alert("Chưa có câu hỏi nào.");return}
  var t=prompt("Đặt tên cho bộ đề (ví dụ: Toán lớp 2 - Ôn tập HK1):",(S&&S.sub?S.sub+" "+(S.grade||""):"Bộ đề"));if(!t)return;
- var d={title:t,subject:S?S.sub:"",grade:S?(S.grade||""):"",questions:Q.map(function(q){return{context:q.context,q:q.q,options:q.mc?q.opts:[],answer:q.correct,accept:q.accept,explain:q.explain}})};
+ var d={title:t,subject:S?S.sub:"",grade:S?(S.grade||""):"",questions:Q.map(function(q){return{context:q.context,q:q.q,options:q.mc?q.opts:[],answer:q.correct,accept:q.accept,explain:q.explain,kind:q.kind,items:q.items,pairs:q.pairs}})};
  var slug=t.normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/đ/gi,"d").replace(/[^a-z0-9]+/gi,"-").replace(/^-|-$/g,"").toLowerCase()||"bo-de";
  var a=document.createElement("a");a.href=URL.createObjectURL(new Blob([JSON.stringify(d,null,2)],{type:"application/json"}));a.download=slug+".json";a.click();
  alert("Đã tải file "+slug+".json\nĐưa file này vào thư mục data trên GitHub và thêm 1 dòng vào data/index.json (xem hướng dẫn).");
@@ -695,15 +719,15 @@ $("ghSave").onclick=function(){var o=$("ghO").value.trim(),r=$("ghR").value.trim
 $("libRef").onclick=refresh;
 $("libSave").onclick=async function(){
  if(!ok()){$("ghSet").open=true;msg("Hãy nhập thông tin kết nối GitHub trước.");return}
- var items=[];uploadedDocs.forEach(function(d){if(d.pages.join("").trim())items.push({name:d.name.replace(/\.[^.]+$/,""),pages:d.pages})});
+ var items=[];uploadedDocs.forEach(function(d){if(d.pages.join("").trim())items.push({name:d.name.replace(/\.[^.]+$/,""),pages:d.pages,sub:$("sub").value,grade:$("grade").value.trim()})});
  var p=$("paste").value.trim();
- if(p){var n=prompt("Phần chữ dán hoặc quét OCR sẽ được lưu thành một sách. Đặt tên:","Văn bản dán");if(n)items.push({name:n,pages:[p]})}
+ if(p){var n=prompt("Phần chữ dán hoặc quét OCR sẽ được lưu thành một sách. Đặt tên:","Văn bản dán");if(n)items.push({name:n,pages:[p],sub:$("sub").value,grade:$("grade").value.trim()})}
  if(!items.length){msg("Chưa có tài liệu nào để lưu.","var(--bad)");return}
  this.disabled=true;
  try{for(var i=0;i<items.length;i++){msg("Đang lưu "+(i+1)+"/"+items.length+": "+items[i].name+"…");
-   var fn=items[i].name.replace(/[\\/:*?"<>|#%]/g,"-").trim()||"sach";
-   await put("books/"+fn+".json",JSON.stringify({name:items[i].name,pages:items[i].pages}))}
-  await refresh();msg("✅ Đã lưu "+items.length+" sách lên GitHub.","var(--ok)")}
+   var fn=(items[i].sub+" · "+items[i].name).replace(/[\\/:*?"<>|#%]/g,"-").trim()||"sach";
+   await put("books/"+fn+".json",JSON.stringify({name:items[i].name,sub:items[i].sub,grade:items[i].grade,pages:items[i].pages}))}
+  await refresh();msg("✅ Đã lưu "+items.length+" sách, gắn với môn "+$("sub").value+($("grade").value.trim()?" – "+$("grade").value.trim():"")+".","var(--ok)")}
  catch(e){msg("Lỗi: "+e.message,"var(--bad)")}
  this.disabled=false};
 $("libList").onclick=async function(e){
@@ -712,7 +736,9 @@ $("libList").onclick=async function(e){
   if(u){msg("Đang mở sách…");var r=await fetch(url("books/"+u.dataset.use),{headers:hd(true),cache:"no-store"});if(!r.ok)throw fail(r);
    var b=JSON.parse(await r.text());
    uploadedDocs.push({id:docIdCounter++,name:b.name,pages:b.pages,p1:1,p2:b.pages.length||1,isScan:false,pdfRef:null});
-   renderFileList();updateDocTextStat();$("gen").disabled=false;msg("✅ Đã mở: "+b.name,"var(--ok)")}
+   if(b.sub&&[].some.call($("sub").options,function(o){return o.value===b.sub})){$("sub").value=b.sub;chips()}
+   if(b.grade)$("grade").value=b.grade;
+   renderFileList();updateDocTextStat();$("gen").disabled=false;msg("✅ Đã mở: "+b.name+(b.sub?" (môn "+b.sub+(b.grade?", "+b.grade:"")+")":""),"var(--ok)")}
   else if(d&&confirm("Xóa sách này khỏi thư viện?")){var r2=await fetch(url("books/"+d.dataset.del),{method:"DELETE",headers:hd(),body:JSON.stringify({message:"Xóa sách",sha:d.dataset.sha})});if(!r2.ok)throw fail(r2);refresh()}
  }catch(x){msg("Lỗi: "+x.message,"var(--bad)")}};
 if(ok())refresh();else msg("Chưa kết nối GitHub.");

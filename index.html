@@ -27,6 +27,8 @@ input[type=text]{font:inherit;width:100%;padding:12px 16px;border-radius:14px;bo
 .bar{height:10px;background:var(--line);border-radius:9px;overflow:hidden;margin:10px 0 16px}.bar i{display:block;height:100%;background:var(--pri);width:0}
 .big{font-size:56px;font-weight:800;text-align:center;color:var(--pri)}
 .top{display:flex;justify-content:space-between;align-items:center}
+.chip{margin:4px;font-size:21px}.ordOut{min-height:56px;border:2px dashed var(--line);border-radius:14px;padding:10px 14px;margin-bottom:12px;font-size:22px}
+.mrow{display:flex;gap:12px;align-items:center;margin-bottom:12px;flex-wrap:wrap}.mrow span{flex:1 1 40%;font-size:22px;font-weight:600}.mrow select{font:inherit;padding:10px;border-radius:12px;border:2px solid var(--line);background:var(--card);color:var(--text);flex:1 1 40%}
 </style></head><body><main>
 <section id="home">
 <h1>📚 Học Tập Thông Minh</h1><p class="sub">Chọn một bài rồi bắt đầu làm nhé!</p>
@@ -61,7 +63,9 @@ function run(qs){Q=qs;i=0;wrong=[];show("quiz");draw()}
 function draw(){
  var q=Q[i];done=false;$("cnt").textContent="Câu "+(i+1)+" / "+Q.length;$("pb").style.width=(i/Q.length*100)+"%";
  var mc=q.options&&q.options.length>=2,h=(q.context?'<div class="ctx">'+esc(q.context)+'</div>':'')+'<div class="q">'+esc(q.q)+'</div>';
- if(mc){q._o=q._o||shuf(q.options);h+=q._o.map(function(o,k){return '<button class="opt" data-k="'+k+'">'+String.fromCharCode(65+k)+'. '+esc(o)+'</button>'}).join("")}
+ if(q.kind==="order"){q._w=shuf(q.items);q._c=[];h+='<div class="ordOut" id="oo">&nbsp;</div><div>'+q._w.map(function(w,k){return '<button class="chip" data-w="'+k+'">'+esc(w)+'</button>'}).join("")+'</div><div class="row"><button id="und">↩ Xóa từ cuối</button><button class="pri" id="chk">Kiểm tra</button></div>'}
+ else if(q.kind==="match"){var rs=shuf(q.pairs.map(function(p){return p[1]}));h+=q.pairs.map(function(p){return '<div class="mrow"><span>'+esc(p[0])+'</span><select><option value="">— chọn —</option>'+rs.map(function(r){return '<option>'+esc(r)+'</option>'}).join("")+'</select></div>'}).join("")+'<div class="row"><button class="pri" id="chk">Kiểm tra</button></div>'}
+ else if(mc){q._o=q._o||shuf(q.options);h+=q._o.map(function(o,k){return '<button class="opt" data-k="'+k+'">'+String.fromCharCode(65+k)+'. '+esc(o)+'</button>'}).join("")}
  else h+='<input type="text" id="fa" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Gõ câu trả lời..."><div class="row"><button class="pri" id="chk">Kiểm tra</button></div>';
  h+='<div id="fb"></div><div class="row hidden" id="nx"><button class="pri" id="nb">'+(i===Q.length-1?'Xem kết quả':'Câu tiếp theo')+'</button></div>';
  $("qc").innerHTML=h;if($("fa"))$("fa").focus();
@@ -70,10 +74,15 @@ function judge(ok,q,val){
  if(done)return;done=true;if(!ok)wrong.push(q);
  var h='<div class="fb '+(ok?'ok':'bad')+'"><b>'+(ok?'🎉 Đúng rồi!':'Chưa đúng. Đáp án: '+esc(q.answer))+'</b>'+(q.explain?'<br>'+esc(q.explain):'')+'</div>';
  $("fb").innerHTML=h;$("nx").classList.remove("hidden");$("nb").focus();
- if($("fa")){$("fa").disabled=true;$("chk").disabled=true}
+ if($("fa")){$("fa").disabled=true}var c=$("chk");if(c)c.disabled=true;var u=$("und");if(u)u.disabled=true;[].forEach.call($("qc").querySelectorAll("select,.chip"),function(x){x.disabled=true})
 }
+function oo(q){$("oo").textContent=q._c.map(function(k){return q._w[k]}).join(" ")||"\u00a0"}
 $("qc").onclick=function(e){var t=e.target,q=Q[i];
+ if(t.classList.contains("chip")&&!done&&!t.disabled){q._c.push(+t.getAttribute("data-w"));t.disabled=true;oo(q);return}
+ if(t.id==="und"&&!done&&q._c.length){var k=q._c.pop();[].forEach.call($("qc").querySelectorAll(".chip"),function(b){if(+b.getAttribute("data-w")===k)b.disabled=false});oo(q);return}
  if(t.classList.contains("opt")&&!done){var o=q._o[+t.getAttribute("data-k")],ok=norm(o)===norm(q.answer);t.classList.add(ok?"ok":"bad");if(!ok)[].forEach.call($("qc").querySelectorAll(".opt"),function(b){if(norm(q._o[+b.getAttribute("data-k")])===norm(q.answer))b.classList.add("ok")});[].forEach.call($("qc").querySelectorAll(".opt"),function(b){b.disabled=true});judge(ok,q)}
+ else if(t.id==="chk"&&q.kind==="order"){if(!q._c.length)return;var sv=q._c.map(function(k){return q._w[k]}).join(" ");judge([q.answer].concat(q.accept||[]).map(norm).indexOf(norm(sv))>-1,q)}
+ else if(t.id==="chk"&&q.kind==="match"){var all=true,good=true;[].forEach.call($("qc").querySelectorAll("select"),function(s,k){if(!s.value)all=false;else if(norm(s.value)!==norm(q.pairs[k][1]))good=false});if(!all){alert("Em hãy nối đủ các ô nhé!");return}judge(good,q)}
  else if(t.id==="chk"){var v=$("fa").value.trim();if(!v)return;var acc=[q.answer].concat(q.accept||[]).map(norm);judge(acc.indexOf(norm(v))>-1,q)}
  else if(t.id==="nb"){i++;if(i<Q.length)draw();else finish()}};
 $("qc").onkeydown=function(e){if(e.key==="Enter"&&e.target.id==="fa"&&!done)$("chk").click()};
